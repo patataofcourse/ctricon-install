@@ -1,14 +1,18 @@
-use std::{ffi::c_void, mem};
+#![feature(io_error_downcast)]
+
 
 use ctru::{
     prelude::{Console, Gfx, KeyPad},
     services::{
-        fs::{self, Archive, ArchiveID, Fs, FsMediaType, PathType},
+        fs::{Archive, Fs, FsMediaType},
         Apt, Hid,
     },
 };
 
 mod home_menu;
+mod ctru_fs_extension;
+
+use ctru_fs_extension::*;
 
 fn main() {
     ctru::use_panic_handler();
@@ -22,10 +26,9 @@ fn main() {
     println!("Home menu extdata stuff");
     let (extdata, id) = open_extdata(fs).expect("Couldn't open Home Menu extra data");
     println!("Extdata ID: {:08x}", id);
-    println!("Filesystem:");
-    for f in fs::read_dir(&extdata, "").unwrap() {
-        println!(" - {:?}", f.unwrap().path());
-    }
+    println!("SaveData: {:?}", extdata.check_file("SaveData.dat"));
+    println!("Cache: {:?}", extdata.check_file("Cache.dat"));
+    println!("CacheD: {:?}", extdata.check_file("CacheD.dat"));
 
     println!("\nPress START to exit");
 
@@ -49,44 +52,8 @@ pub fn open_extdata(fs: Fs) -> Option<(Archive, u64)> {
     for id in EXTDATA_IDS {
         match fs.extdata(id, FsMediaType::Sd) {
             Ok(c) => return Some((c, id)),
-            Err(e) =>println!(" Error opening {:08x}\n {}", id, e)
+            Err(e) => println!(" Error opening {:08x}\n {}", id, e),
         }
     }
     None
-}
-
-#[allow(dead_code)]
-struct TotallyNotArchive {
-    id: ArchiveID,
-    handle: u64,
-}
-
-trait FsPlus {
-    fn extdata(&self, id: u64, media_type: FsMediaType) -> ctru::Result<Archive>;
-    fn binary_path<const T: usize>(&self, data: &[u32; T]) -> ctru_sys::FS_Path {
-        ctru_sys::FS_Path {
-            type_: PathType::Binary.into(),
-            size: T as u32 * 4,
-            data: data.as_ptr() as *const c_void,
-        }
-    }
-}
-
-impl FsPlus for Fs {
-    fn extdata(&self, id: u64, media_type: FsMediaType) -> ctru::Result<Archive> {
-        let id_lower = id as u32;
-        let id_higher = (id >> 32) as u32;
-        unsafe {
-            let mut handle = 0;
-            let id = ArchiveID::Extdata;
-            let path = self.binary_path(&[media_type.into(), id_lower, id_higher]);
-            println!("{:?} {:X?}", path, *(path.data as *const [u32; 3]));
-            let r = ctru_sys::FSUSER_OpenArchive(&mut handle, id.into(), path);
-            if r < 0 {
-                Err(ctru::Error::from(r))
-            } else {
-                Ok(mem::transmute(TotallyNotArchive { handle, id }))
-            }
-        }
-    }
 }

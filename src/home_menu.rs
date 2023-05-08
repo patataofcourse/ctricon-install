@@ -4,14 +4,14 @@ pub enum ThemeType {
     FromSD,
     Unk3,
     Unk4,
-    Unk5
+    Unk5,
 }
 
 pub struct ThemeEntry {
     pub index: u32,
     pub dlc_titleid: u8,
     pub theme_type: ThemeType,
-    pub null: [u8; 2]
+    pub null: [u8; 2],
 }
 
 pub struct SaveData {
@@ -41,6 +41,6 @@ pub struct CacheDat {
     pub entries: [CacheDatEntry; 360],
 }
 
-pub type CtrIcon = [u8; 0x36c0]; 
+pub type CtrIcon = [u8; 0x36c0];
 
 pub type CacheDDat = [CtrIcon; 360];

@@ -1,7 +1,6 @@
 use std::{ffi::c_void, mem};
 
-use ctru::services::fs::{ArchiveID, FsMediaType, Archive, PathType, Fs};
-
+use ctru::services::fs::{Archive, ArchiveID, Fs, FsMediaType, PathType};
 
 #[allow(dead_code)]
 struct TotallyNotArchive {
@@ -28,7 +27,6 @@ impl FsPlus for Fs {
             let mut handle = 0;
             let id = ArchiveID::Extdata;
             let path = self.binary_path(&[media_type.into(), id_lower, id_higher]);
-            println!("{:?} {:X?}", path, *(path.data as *const [u32; 3]));
             let r = ctru_sys::FSUSER_OpenArchive(&mut handle, id.into(), path);
             if r < 0 {
                 Err(ctru::Error::from(r))
@@ -38,7 +36,7 @@ impl FsPlus for Fs {
         }
     }
 }
-
+/*
 pub trait ArchivePlus {
     fn check_file(&self, path: impl Into<String>) -> ctru::Result<()>;
     fn read_file(&self, path: String) -> ctru::Result<Vec<u8>>;
@@ -64,11 +62,9 @@ impl ArchivePlus for Archive {
         };
         if res != 0 {
             Err(ctru::Error::Os(res))?
-        } 
+        }
 
-        let res = unsafe {
-            ctru_sys::FSFILE_Close(handle)
-        };
+        let res = unsafe { ctru_sys::FSFILE_Close(handle) };
         if res != 0 {
             Err(ctru::Error::Os(res))
         } else {
@@ -121,9 +117,7 @@ impl ArchivePlus for Archive {
             Err(ctru::Error::Os(res))?
         }
 
-        let res = unsafe {
-            ctru_sys::FSFILE_Close(handle)
-        };
+        let res = unsafe { ctru_sys::FSFILE_Close(handle) };
         if res != 0 {
             Err(ctru::Error::Os(res))
         } else {
@@ -135,3 +129,4 @@ impl ArchivePlus for Archive {
         todo!();
     }
 }
+*/

@@ -1,16 +1,15 @@
-#![feature(io_error_downcast)]
-
+#![feature(io_error_downcast, let_chains)]
 
 use ctru::{
     prelude::{Console, Gfx, KeyPad},
     services::{
-        fs::{Archive, Fs, FsMediaType},
+        fs::{Archive, Fs, FsMediaType, File},
         Apt, Hid,
     },
 };
 
-mod home_menu;
 mod ctru_fs_extension;
+mod home_menu;
 
 use ctru_fs_extension::*;
 
@@ -24,11 +23,27 @@ fn main() {
     let _console = Console::new(gfx.top_screen.borrow_mut());
 
     println!("Home menu extdata stuff");
+    println!("patataofcourse#5556\n");
     let (extdata, id) = open_extdata(fs).expect("Couldn't open Home Menu extra data");
     println!("Extdata ID: {:08x}", id);
-    println!("SaveData: {:?}", extdata.check_file("SaveData.dat"));
-    println!("Cache: {:?}", extdata.check_file("Cache.dat"));
-    println!("CacheD: {:?}", extdata.check_file("CacheD.dat"));
+
+    let f_savedata = File::open(&extdata, "/SaveData.dat");
+    let f_cache = File::open(&extdata, "/Cache.dat");
+    let f_cached = File::open(&extdata, "/CacheD.dat");
+
+    println!("SaveData: {}", if f_savedata.is_ok() {"ok"} else {"err"});
+    println!("Cache: {}", if f_cache.is_ok() {"ok"} else {"err"});
+    println!("CacheD: {}", if f_cached.is_ok() {"ok"} else {"err"});
+
+    if f_savedata.is_err() || f_cache.is_err() {
+        println!("\nSomething seems to be wrong with your Home Menu!");
+        println!("Run the home menu and then try again");
+        prompt_exit(&apt, &mut hid, &gfx);
+    }
+    if f_cached.is_err() {
+        println!("\nCouldn't load the icon cache - likely in use");
+        println!("Make sure to run this on autoboot mode");
+    }
 
     println!("\nPress START to exit");
 
@@ -52,8 +67,28 @@ pub fn open_extdata(fs: Fs) -> Option<(Archive, u64)> {
     for id in EXTDATA_IDS {
         match fs.extdata(id, FsMediaType::Sd) {
             Ok(c) => return Some((c, id)),
-            Err(e) => println!(" Error opening {:08x}\n {}", id, e),
+            Err(_e) => {
+                //println!(" Error opening {:08x}\n {}", id, e)
+            }
         }
     }
     None
+}
+
+pub fn prompt_exit(apt: &Apt, hid: &mut Hid, gfx: &Gfx) -> ! {
+    println!("\nPress START to exit");
+
+    // Main loop
+    while apt.main_loop() {
+        //Scan all the inputs. This should be done once for each frame
+        hid.scan_input();
+
+        if hid.keys_down().contains(KeyPad::START) {
+            break;
+        }
+
+        //Wait for VBlank
+        gfx.wait_for_vblank();
+    }
+    std::process::exit(0);
 }

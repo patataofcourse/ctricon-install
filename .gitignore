@@ -1,0 +1,6 @@
+/target
+/dist
+
+romfs/ctricon-install.lst
+
+.vscode

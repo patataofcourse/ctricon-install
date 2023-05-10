@@ -14,20 +14,21 @@ pub struct ThemeEntry {
     pub null: [u8; 2],
 }
 
+#[repr(C)]
 pub struct SaveData {
     pub version: u8,
-    pub pad0: [u8; 7],
+    pub unk0: [u8; 7],
     pub titles: [u64; 360],
     pub is_icon_present: [bool; 360],
-    pub pad1: [u8; 8],
-    pub array_a: [i16; 360],
-    pub array_b: [i8; 360],
-    pub pad2: [u8; 0x2d0],
+    pub unk1: [u8; 8],
+    pub titles_pos: [i16; 360],
+    pub titles_folder: [i8; 360],
+    pub unk2: [u8; 0x2d0],
     pub theme_standard: ThemeEntry,
     pub theme_shuffle: [ThemeEntry; 10],
-    pub pad3: [u8; 0xb],
+    pub unk3: [u8; 0xb],
     pub is_shuffle: bool,
-    pub pad4: [u8; 0x1984], // literally 1984
+    pub unk4: [u8; 0x1984], // literally 1984
 }
 
 pub struct CacheDatEntry {

@@ -31,7 +31,7 @@ dependencies = [
 [[package]]
 name = "ctru-rs"
 version = "0.7.1"
-source = "git+https://github.com/rust3ds/ctru-rs.git#ca8f13d28cc7f700386bab085f092440f99a10dd"
+source = "git+https://github.com/rust3ds/ctru-rs.git#f6d16d15544d4f0cefb970801cfe03315ddace1d"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -47,7 +47,7 @@ dependencies = [
 [[package]]
 name = "ctru-sys"
 version = "21.2.0+2.1.2-1"
-source = "git+https://github.com/rust3ds/ctru-rs.git#ca8f13d28cc7f700386bab085f092440f99a10dd"
+source = "git+https://github.com/rust3ds/ctru-rs.git#f6d16d15544d4f0cefb970801cfe03315ddace1d"
 dependencies = [
  "libc",
  "which",
@@ -61,9 +61,9 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "libc"
-version = "0.2.143"
+version = "0.2.144"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edc207893e85c5d6be840e969b496b53d94cec8be2d501b214f50daa97fa8024"
+checksum = "2b00cc1c228a6782d0f076e7b232802e0c5689d41bb5df366f2a6b6621cfdfe1"
 
 [[package]]
 name = "once_cell"

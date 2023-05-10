@@ -1,3 +1,4 @@
+#[repr(u8)]
 pub enum ThemeType {
     None,
     BuiltIn,
@@ -20,15 +21,14 @@ pub struct SaveData {
     pub unk0: [u8; 7],
     pub titles: [u64; 360],
     pub is_icon_present: [bool; 360],
-    pub unk1: [u8; 8],
     pub titles_pos: [i16; 360],
     pub titles_folder: [i8; 360],
-    pub unk2: [u8; 0x2d0],
+    pub unk1: [u8; 0x2d0],
     pub theme_standard: ThemeEntry,
     pub theme_shuffle: [ThemeEntry; 10],
-    pub unk3: [u8; 0xb],
+    pub unk2: [u8; 0xb],
     pub is_shuffle: bool,
-    pub unk4: [u8; 0x1984], // literally 1984
+    pub unk3: [u8; 0x1984], // literally 1984
 }
 
 pub struct CacheDatEntry {

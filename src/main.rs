@@ -2,7 +2,7 @@
 
 use std::{
     io::Read,
-    mem::{self, size_of},
+    mem::{self},
 };
 
 use ctru::{
@@ -18,6 +18,11 @@ mod home_menu;
 
 use ctru_fs_extension::*;
 
+// for debugging :D
+fn offset_of<T1,T2>(a: &T1, b: &T2) -> isize {
+    b as *const T2 as isize - a as *const T1 as isize
+}
+
 fn main() {
     ctru::use_panic_handler();
 
@@ -29,7 +34,12 @@ fn main() {
 
     println!("Home menu extdata stuff");
     println!("patataofcourse#5556\n");
-    let (extdata, id) = open_extdata(fs).expect("Couldn't open Home Menu extra data");
+
+    let Some((extdata, id)) = open_extdata(fs) else {
+        println!("\nNo Home Menu extdata could be found!");
+        println!("Run the home menu and then try again");
+        prompt_exit(&apt, &mut hid, &gfx);
+    };
     println!("Extdata ID: {:08x}", id);
 
     let f_savedata = File::open(&extdata, "/SaveData.dat");
@@ -53,14 +63,10 @@ fn main() {
         println!("Make sure to run this on autoboot mode");
         prompt_exit(&apt, &mut hid, &gfx);
     };
-    if f_savedata.metadata().unwrap().len() != size_of::<home_menu::SaveData>() as u64 {
+    
+    if f_savedata.metadata().unwrap().len() != mem::size_of::<home_menu::SaveData>() as u64 {
         println!("\n/SaveData.dat is the wrong size!");
         println!("Update your console, run the home menu and then try again");
-        println!(
-            "debug: {:} {:x}",
-            f_savedata.metadata().unwrap().len(),
-            size_of::<home_menu::SaveData>()
-        );
         prompt_exit(&apt, &mut hid, &gfx);
     }
 

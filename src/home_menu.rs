@@ -1,4 +1,8 @@
-use std::mem::size_of;
+use std::{
+    io::{self, Read, Seek},
+    mem,
+    string::FromUtf16Error,
+};
 
 use static_assertions::const_assert;
 
@@ -45,6 +49,15 @@ pub struct CacheDat {
     pub format_ver: u8,
     pub pad: [u8; 7],
     pub entries: [CacheDatEntry; 360],
+}
+
+impl CacheDat {
+    pub fn position(&self, id: u64) -> usize {
+        self.entries
+            .iter()
+            .position(|c| c.titleid == id)
+            .unwrap_or(0)
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -159,14 +172,31 @@ impl Icon {
 
 pub type CacheDDat = [Icon; 360];
 
+pub fn get_cacheD_icon<F: Read + Seek>(f: &mut F, pos: usize) -> io::Result<Icon> {
+    f.seek(io::SeekFrom::Start((pos * mem::size_of::<Icon>()) as u64))?;
+    let mut icon = [0u8; mem::size_of::<Icon>()];
+    f.read_exact(&mut icon)?;
+    Ok(unsafe { mem::transmute(icon) })
+}
+
 // assertions
-const_assert!(size_of::<ThemeEntry>() == 8);
-const_assert!(size_of::<SaveData>() == 0x2da0);
-const_assert!(size_of::<CacheDatEntry>() == 0x10);
-const_assert!(size_of::<CacheDat>() == 0x1688);
-const_assert!(size_of::<AppTitles>() == 0x200);
-const_assert!(size_of::<GameRatings>() == 0x10);
-const_assert!(size_of::<AppSettings>() == 0x30);
-const_assert!(size_of::<CtrIcon>() == 0x36c0);
-//const_assert!(size_of::<NtrIcon>() == 0x36c0);
-const_assert!(size_of::<Icon>() == 0x36c0);
+const_assert!(mem::size_of::<ThemeEntry>() == 8);
+const_assert!(mem::size_of::<SaveData>() == 0x2da0);
+const_assert!(mem::size_of::<CacheDatEntry>() == 0x10);
+const_assert!(mem::size_of::<CacheDat>() == 0x1688);
+const_assert!(mem::size_of::<AppTitles>() == 0x200);
+const_assert!(mem::size_of::<GameRatings>() == 0x10);
+const_assert!(mem::size_of::<AppSettings>() == 0x30);
+const_assert!(mem::size_of::<CtrIcon>() == 0x36c0);
+//const_assert!(mem::size_of::<NtrIcon>() == 0x36c0);
+const_assert!(mem::size_of::<Icon>() == 0x36c0);
+
+pub trait Utf16 {
+    fn read_utf16(&self) -> Result<String, FromUtf16Error>;
+}
+
+impl<const N: usize> Utf16 for &[u8; N] {
+    fn read_utf16(&self) -> Result<String, FromUtf16Error> {
+        String::from_utf16(unsafe { mem::transmute::<_, &&[u16]>(self) })
+    }
+}

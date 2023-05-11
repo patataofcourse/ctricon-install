@@ -17,26 +17,26 @@ mod ctru_fs_extension;
 mod home_menu;
 
 use ctru_fs_extension::*;
-use ctru_sys::svcExitProcess;
+use home_menu::Utf16;
 
 // for debugging :D
 fn offset_of<T1, T2>(a: &T1, b: &T2) -> isize {
     b as *const T2 as isize - a as *const T1 as isize
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     ctru::use_panic_handler();
 
-    let gfx = Gfx::new().expect("Couldn't obtain GFX controller");
-    let mut hid = Hid::new().expect("Couldn't obtain HID controller");
-    let apt = Apt::new().expect("Couldn't obtain APT controller");
-    let mut fs = Fs::new().expect("Couldn't get FS controller");
+    let gfx = Gfx::new()?;
+    let mut hid = Hid::new()?;
+    let apt = Apt::new()?;
+    let mut fs = Fs::new()?;
     let _console = Console::new(gfx.top_screen.borrow_mut());
 
     println!("Home menu extdata stuff");
     println!("patataofcourse#5556\n");
 
-    let sdmc = fs.sdmc().unwrap();
+    let sdmc = fs.sdmc()?;
 
     let Some((extdata, id)) = open_extdata(fs) else {
         println!("\nNo Home Menu extdata could be found!");
@@ -67,14 +67,24 @@ fn main() {
         prompt_exit(&apt, &mut hid, &gfx);
     };
 
-    if f_savedata.metadata().unwrap().len() != mem::size_of::<home_menu::SaveData>() as u64 {
+    if f_savedata.metadata()?.len() != mem::size_of::<home_menu::SaveData>() as u64 {
         println!("\n/SaveData.dat is the wrong size!");
         println!("Update your console, run the home menu and then try again");
         prompt_exit(&apt, &mut hid, &gfx);
     }
+    if f_cache.metadata()?.len() != mem::size_of::<home_menu::CacheDat>() as u64 {
+        println!("\n/Cache.dat is the wrong size!");
+        println!("Run the home menu and then try again");
+        prompt_exit(&apt, &mut hid, &gfx);
+    }
+    if f_cached.metadata()?.len() != mem::size_of::<home_menu::CacheDDat>() as u64 {
+        println!("\n/CacheD.dat is the wrong size!");
+        println!("Run the home menu and then try again");
+        prompt_exit(&apt, &mut hid, &gfx);
+    }
 
     let mut savedata = [0u8; mem::size_of::<home_menu::SaveData>()];
-    f_savedata.read_exact(&mut savedata).unwrap();
+    f_savedata.read_exact(&mut savedata)?;
     let savedata: home_menu::SaveData = unsafe { mem::transmute(savedata) };
 
     if savedata.version < 4 {
@@ -82,6 +92,10 @@ fn main() {
         println!("Update your console, run the home menu and then try again");
         prompt_exit(&apt, &mut hid, &gfx);
     }
+
+    let mut cache_dat = [0u8; mem::size_of::<home_menu::CacheDat>()];
+    f_cache.read_exact(&mut cache_dat)?;
+    let cache_dat: home_menu::CacheDat = unsafe { mem::transmute(cache_dat) };
 
     let mut icon_titles = vec![];
     {
@@ -91,7 +105,7 @@ fn main() {
             prompt_exit(&apt, &mut hid, &gfx);
         };
         for title in icon_dir {
-            let title = title.unwrap().path();
+            let title = title?.path();
             if let Some(Some("icn")) = title.extension().map(|c| c.to_str()) {
                 let name = title.file_stem().unwrap().to_str().unwrap();
                 if let Ok(c) = u32::from_str_radix(name, 16) {
@@ -104,7 +118,7 @@ fn main() {
     let mut titles = vec![];
     for title in savedata.titles {
         if (title >> 32) == 0x00040000 && icon_titles.contains(&(title as u32)) {
-            titles.push(title as u32);
+            titles.push(title);
         }
     }
     println!("{}", titles.len());
@@ -121,7 +135,14 @@ fn main() {
 
         if hid.keys_down().contains(KeyPad::A) && titles.len() > title_pos {
             for id in titles.iter().skip(title_pos).take(10) {
-                println!("{id:016x}");
+                println!(
+                    "{id:016x} - {}",
+                    (&home_menu::get_cacheD_icon(&mut f_cached, cache_dat.position(*id))?
+                        .ctr()
+                        .title_en
+                        .short)
+                        .read_utf16()?
+                );
             }
             println!("\nPress A to print 10 more");
             println!("Press START to exit");
@@ -135,6 +156,7 @@ fn main() {
         //Wait for VBlank
         gfx.wait_for_vblank();
     }
+    Ok(())
 }
 
 const EXTDATA_IDS: [u64; 3] = [0x00000082, 0x0000008f, 0x00000098];
@@ -166,6 +188,9 @@ pub fn prompt_exit(apt: &Apt, hid: &mut Hid, gfx: &Gfx) -> ! {
         //Wait for VBlank
         gfx.wait_for_vblank();
     }
-    unsafe {svcExitProcess();}
-    //std::process::exit(1);
+    exit()
+}
+
+pub fn exit() -> ! {
+    unsafe { ctru_sys::svcExitProcess() };
 }

@@ -26,6 +26,7 @@ version = "0.1.0"
 dependencies = [
  "ctru-rs",
  "ctru-sys",
+ "static_assertions",
 ]
 
 [[package]]

@@ -1,3 +1,7 @@
+use std::mem::size_of;
+
+use static_assertions::const_assert;
+
 #[repr(u8)]
 pub enum ThemeType {
     None,
@@ -42,6 +46,124 @@ pub struct CacheDat {
     pub entries: [CacheDatEntry; 360],
 }
 
-pub type CtrIcon = [u8; 0x36c0];
+#[derive(Clone, Copy)]
+pub struct AppTitles {
+    pub short: [u8; 0x80],
+    pub long: [u8; 0x100],
+    pub publisher: [u8; 0x80],
+}
 
-pub type CacheDDat = [CtrIcon; 360];
+#[derive(Clone, Copy)]
+pub struct GameRatings {
+    pub cero: u8,
+    pub esrb: u8,
+    pub null0: u8,
+    pub usk: u8,
+    pub pegi: u8,
+    pub null1: u8,
+    pub pegi_prt: u8,
+    pub pegi_bffc: u8,
+    pub cob: u8,
+    pub grb: u8,
+    pub cgsrr: u8,
+    pub null2: [u8; 5],
+}
+
+impl GameRatings {
+    pub const HAS_RATING: u32 = 0x80;
+    pub const RATING_PENDING: u32 = 0x40;
+    pub const NO_RESTRICTION: u32 = 0x20;
+    pub const AGE_MASK: u32 = 0x1F;
+}
+
+#[derive(Clone, Copy)]
+pub struct AppSettings {
+    pub ratings: GameRatings,
+    pub regions: u32,
+    pub match_maker_id: u32,
+    pub match_maker_bit_id: u64,
+    pub flags: u32,
+    pub eula_minor: u8,
+    pub eula_major: u8,
+    pub optimal_animation_default_frame: f32,
+    pub streetpass_id: u32,
+}
+
+impl AppSettings {
+    pub const REGION_JPN: u32 = 1;
+    pub const REGION_USA: u32 = 2;
+    pub const REGION_EUR: u32 = 4;
+    pub const REGION_AUS: u32 = 8;
+    pub const REGION_CHN: u32 = 0x10;
+    pub const REGION_KOR: u32 = 0x20;
+    pub const REGION_TWN: u32 = 0x40;
+
+    pub const FLAGS_VISIBLE: u32 = 1;
+    pub const FLAGS_AUTOBOOT: u32 = 2;
+    pub const FLAGS_ALLOW_3D: u32 = 4;
+    pub const FLAGS_REQUIRE_EULA: u32 = 8;
+    pub const FLAGS_AUTOSAVE: u32 = 0x10;
+    pub const FLAGS_EXBANNER: u32 = 0x20;
+    pub const FLAGS_RATING_REQUIRED: u32 = 0x40;
+    pub const FLAGS_HAS_SAVE: u32 = 0x80;
+    pub const FLAGS_RECORD_USAGE: u32 = 0x100;
+    pub const FLAGS_DISABLE_SAVE_BACKUP: u32 = 0x400;
+    pub const FLAGS_N3DS_ONLY: u32 = 0x1000;
+}
+
+pub type IconGfxSmall = [u8; 0x480];
+pub type IconGfxLarge = [u8; 0x1200];
+
+#[derive(Clone, Copy)]
+pub struct CtrIcon {
+    pub magic: [u8; 4], // b"SMDH"
+    pub version: u16,
+    pub reserved: u16,
+    pub title_jp: AppTitles,
+    pub title_en: AppTitles,
+    pub title_fr: AppTitles,
+    pub title_de: AppTitles,
+    pub title_it: AppTitles,
+    pub title_es: AppTitles,
+    pub title_ch: AppTitles,
+    pub title_kr: AppTitles,
+    pub title_nl: AppTitles,
+    pub title_pt: AppTitles,
+    pub title_ru: AppTitles,
+    pub title_tw: AppTitles,
+    pub title_unused: [AppTitles; 4],
+    pub settings: AppSettings,
+    pub null: u64,
+    pub icon_small: IconGfxSmall,
+    pub icon_large: IconGfxLarge,
+}
+
+pub type NtrIcon = [u8; 0x36c0];
+
+pub union Icon {
+    ctr: CtrIcon,
+    ntr: NtrIcon,
+}
+
+impl Icon {
+    pub fn ctr(&self) -> &CtrIcon {
+        unsafe { &self.ctr }
+    }
+    pub fn ntr(&self) -> &NtrIcon {
+        unsafe { &self.ntr }
+    }
+}
+
+pub type CacheDDat = [Icon; 360];
+
+// assertions
+const_assert!(size_of::<ThemeEntry>() == 8);
+const_assert!(size_of::<SaveData>() == 0x2da0);
+const_assert!(size_of::<CacheDatEntry>() == 0x10);
+const_assert!(size_of::<CacheDat>() == 0x1688);
+const_assert!(size_of::<AppTitles>() == 0x200);
+const_assert!(size_of::<GameRatings>() == 0x10);
+const_assert!(size_of::<AppSettings>() == 0x30);
+const_assert!(size_of::<CtrIcon>() == 0x36c0);
+//const_assert!(size_of::<NtrIcon>() == 0x36c0);
+const_assert!(size_of::<Icon>() == 0x36c0);

@@ -8,7 +8,7 @@ use std::{
 use ctru::{
     prelude::{Console, Gfx, KeyPad},
     services::{
-        fs::{Archive, File, Fs, FsMediaType},
+        fs::{self, Archive, File, Fs, FsMediaType},
         Apt, Hid,
     },
 };
@@ -19,7 +19,7 @@ mod home_menu;
 use ctru_fs_extension::*;
 
 // for debugging :D
-fn offset_of<T1,T2>(a: &T1, b: &T2) -> isize {
+fn offset_of<T1, T2>(a: &T1, b: &T2) -> isize {
     b as *const T2 as isize - a as *const T1 as isize
 }
 
@@ -29,11 +29,13 @@ fn main() {
     let gfx = Gfx::new().expect("Couldn't obtain GFX controller");
     let mut hid = Hid::new().expect("Couldn't obtain HID controller");
     let apt = Apt::new().expect("Couldn't obtain APT controller");
-    let fs = Fs::new().expect("Couldn't get FS controller");
+    let mut fs = Fs::new().expect("Couldn't get FS controller");
     let _console = Console::new(gfx.top_screen.borrow_mut());
 
     println!("Home menu extdata stuff");
     println!("patataofcourse#5556\n");
+
+    let sdmc = fs.sdmc().unwrap();
 
     let Some((extdata, id)) = open_extdata(fs) else {
         println!("\nNo Home Menu extdata could be found!");
@@ -63,7 +65,7 @@ fn main() {
         println!("Make sure to run this on autoboot mode");
         prompt_exit(&apt, &mut hid, &gfx);
     };
-    
+
     if f_savedata.metadata().unwrap().len() != mem::size_of::<home_menu::SaveData>() as u64 {
         println!("\n/SaveData.dat is the wrong size!");
         println!("Update your console, run the home menu and then try again");
@@ -80,6 +82,31 @@ fn main() {
         prompt_exit(&apt, &mut hid, &gfx);
     }
 
+    let mut icon_titles = vec![];
+    {
+        let Ok(icon_dir) = fs::read_dir(&sdmc, "/3ds/ctricon-installer") else {
+            println!("Couldn't open /3ds/ctricon-installer folder!");
+            println!("Make the folder and store the icons to install there");
+            prompt_exit(&apt, &mut hid, &gfx);
+        };
+        for title in icon_dir {
+            let title = title.unwrap().path();
+            if let Some(Some("icn")) = title.extension().map(|c| c.to_str()) {
+                let name = title.file_stem().unwrap().to_str().unwrap();
+                if let Ok(c) = u32::from_str_radix(name, 16) {
+                    icon_titles.push(c);
+                }
+            }
+        }
+    }
+
+    let mut titles = vec![];
+    for title in savedata.titles {
+        if (title >> 32) as u32 == 0x04000000 && icon_titles.contains(&(title as u32)) {
+            titles.push(title as u32);
+        }
+    }
+
     println!("\nPress A to print titles (10 at a time)");
     println!("Press START to exit");
 
@@ -90,8 +117,8 @@ fn main() {
         //Scan all the inputs. This should be done once for each frame
         hid.scan_input();
 
-        if hid.keys_down().contains(KeyPad::A) {
-            for id in savedata.titles.iter().skip(title_pos).take(10) {
+        if hid.keys_down().contains(KeyPad::A) && titles.len() > title_pos {
+            for id in titles.iter().skip(title_pos).take(10) {
                 println!("{id:016x}");
             }
             println!("\nPress A to print 10 more");

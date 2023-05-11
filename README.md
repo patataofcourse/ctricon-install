@@ -1,5 +1,7 @@
 # ctricon-installer
 
+## THIS IS STILL A WIP
+
 A tool to install custom game icons into the Home Menu icon cache.
 - Your custom icons will display in the Home Menu
 - Potentially works with cartridges (?)

@@ -3,6 +3,7 @@ use std::mem::size_of;
 use static_assertions::const_assert;
 
 #[repr(u8)]
+#[allow(dead_code)]
 pub enum ThemeType {
     None,
     BuiltIn,
@@ -69,6 +70,7 @@ pub struct GameRatings {
     pub null2: [u8; 5],
 }
 
+#[allow(dead_code)]
 impl GameRatings {
     pub const HAS_RATING: u32 = 0x80;
     pub const RATING_PENDING: u32 = 0x40;
@@ -89,6 +91,7 @@ pub struct AppSettings {
     pub streetpass_id: u32,
 }
 
+#[allow(dead_code)]
 impl AppSettings {
     pub const REGION_JPN: u32 = 1;
     pub const REGION_USA: u32 = 2;

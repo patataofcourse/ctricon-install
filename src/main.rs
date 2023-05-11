@@ -17,6 +17,7 @@ mod ctru_fs_extension;
 mod home_menu;
 
 use ctru_fs_extension::*;
+use ctru_sys::svcExitProcess;
 
 // for debugging :D
 fn offset_of<T1, T2>(a: &T1, b: &T2) -> isize {
@@ -84,8 +85,8 @@ fn main() {
 
     let mut icon_titles = vec![];
     {
-        let Ok(icon_dir) = fs::read_dir(&sdmc, "/3ds/ctricon-installer") else {
-            println!("Couldn't open /3ds/ctricon-installer folder!");
+        let Ok(icon_dir) = fs::read_dir(&sdmc, "/3ds/ctricon-install") else {
+            println!("Couldn't open /3ds/ctricon-install folder!");
             println!("Make the folder and store the icons to install there");
             prompt_exit(&apt, &mut hid, &gfx);
         };
@@ -102,10 +103,11 @@ fn main() {
 
     let mut titles = vec![];
     for title in savedata.titles {
-        if (title >> 32) as u32 == 0x04000000 && icon_titles.contains(&(title as u32)) {
+        if (title >> 32) == 0x00040000 && icon_titles.contains(&(title as u32)) {
             titles.push(title as u32);
         }
     }
+    println!("{}", titles.len());
 
     println!("\nPress A to print titles (10 at a time)");
     println!("Press START to exit");
@@ -122,7 +124,7 @@ fn main() {
                 println!("{id:016x}");
             }
             println!("\nPress A to print 10 more");
-            println!("\nPress START to exit");
+            println!("Press START to exit");
             title_pos += 10;
         }
 
@@ -164,5 +166,6 @@ pub fn prompt_exit(apt: &Apt, hid: &mut Hid, gfx: &Gfx) -> ! {
         //Wait for VBlank
         gfx.wait_for_vblank();
     }
-    std::process::exit(1);
+    unsafe {svcExitProcess();}
+    //std::process::exit(1);
 }

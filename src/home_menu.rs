@@ -172,7 +172,7 @@ impl Icon {
 
 pub type CacheDDat = [Icon; 360];
 
-pub fn get_cacheD_icon<F: Read + Seek>(f: &mut F, pos: usize) -> io::Result<Icon> {
+pub fn get_cache_d_icon<F: Read + Seek>(f: &mut F, pos: usize) -> io::Result<Icon> {
     f.seek(io::SeekFrom::Start((pos * mem::size_of::<Icon>()) as u64))?;
     let mut icon = [0u8; mem::size_of::<Icon>()];
     f.read_exact(&mut icon)?;
@@ -197,6 +197,10 @@ pub trait Utf16 {
 
 impl<const N: usize> Utf16 for &[u8; N] {
     fn read_utf16(&self) -> Result<String, FromUtf16Error> {
-        String::from_utf16(unsafe { mem::transmute::<_, &&[u16]>(self) })
+        String::from_utf16(
+            &(0..N / 2)
+                .map(|i| u16::from_le_bytes([self[2 * i], self[2 * i + 1]]))
+                .collect::<Vec<_>>(),
+        )
     }
 }

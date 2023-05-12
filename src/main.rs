@@ -1,4 +1,4 @@
-#![feature(io_error_downcast, let_chains)]
+#![feature(io_error_downcast, let_chains, never_type)]
 
 use std::{
     io::Read,
@@ -13,16 +13,13 @@ use ctru::{
     },
 };
 
+mod abort;
 mod ctru_fs_extension;
 mod home_menu;
 
+use abort::HowFix;
 use ctru_fs_extension::*;
 use home_menu::Utf16;
-
-// for debugging :D
-fn offset_of<T1, T2>(a: &T1, b: &T2) -> isize {
-    b as *const T2 as isize - a as *const T1 as isize
-}
 
 fn main() -> anyhow::Result<()> {
     ctru::use_panic_handler();
@@ -39,9 +36,7 @@ fn main() -> anyhow::Result<()> {
     let sdmc = fs.sdmc()?;
 
     let Some((extdata, id)) = open_extdata(fs) else {
-        println!("\nNo Home Menu extdata could be found!");
-        println!("Run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(apt, hid, gfx, "No Home Menu extra data could be found!", HowFix::RunMenu)
     };
     println!("Extdata ID: {:08x}", id);
 
@@ -57,30 +52,38 @@ fn main() -> anyhow::Result<()> {
     println!("CacheD: {}", if f_cached.is_ok() { "ok" } else { "err" });
 
     let (Ok(mut f_savedata), Ok(mut f_cache)) =  (f_savedata, f_cache) else {
-        println!("\nSomething seems to be wrong with your Home Menu!");
-        println!("Run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(apt, hid, gfx, "Something seems to be wrong with your Home Menu!", HowFix::RunMenu)
     };
     let Ok(mut f_cached) = f_cached else {
-        println!("\nCouldn't load the icon cache - likely in use");
-        println!("Make sure to run this on autoboot mode");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(apt, hid, gfx, "Couldn't load the icon cache - likely in use", HowFix::Autoboot)
     };
 
     if f_savedata.metadata()?.len() != mem::size_of::<home_menu::SaveData>() as u64 {
-        println!("\n/SaveData.dat is the wrong size!");
-        println!("Update your console, run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(
+            apt,
+            hid,
+            gfx,
+            "/SaveData.dat is the wrong size!",
+            HowFix::Update
+        )
     }
     if f_cache.metadata()?.len() != mem::size_of::<home_menu::CacheDat>() as u64 {
-        println!("\n/Cache.dat is the wrong size!");
-        println!("Run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(
+            apt,
+            hid,
+            gfx,
+            "/Cache.dat is the wrong size!",
+            HowFix::RunMenu
+        )
     }
     if f_cached.metadata()?.len() != mem::size_of::<home_menu::CacheDDat>() as u64 {
-        println!("\n/CacheD.dat is the wrong size!");
-        println!("Run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(
+            apt,
+            hid,
+            gfx,
+            "/CacheD.dat is the wrong size!",
+            HowFix::RunMenu
+        )
     }
 
     let mut savedata = [0u8; mem::size_of::<home_menu::SaveData>()];
@@ -88,9 +91,13 @@ fn main() -> anyhow::Result<()> {
     let savedata: home_menu::SaveData = unsafe { mem::transmute(savedata) };
 
     if savedata.version < 4 {
-        println!("Outdated /Savedata.dat version!");
-        println!("Update your console, run the home menu and then try again");
-        prompt_exit(&apt, &mut hid, &gfx);
+        abort!(
+            apt,
+            hid,
+            gfx,
+            "Outdated /Savedata.dat version!",
+            HowFix::Update
+        )
     }
 
     let mut cache_dat = [0u8; mem::size_of::<home_menu::CacheDat>()];
@@ -100,9 +107,7 @@ fn main() -> anyhow::Result<()> {
     let mut icon_titles = vec![];
     {
         let Ok(icon_dir) = fs::read_dir(&sdmc, "/3ds/ctricon-install") else {
-            println!("Couldn't open /3ds/ctricon-install folder!");
-            println!("Make the folder and store the icons to install there");
-            prompt_exit(&apt, &mut hid, &gfx);
+            abort!(apt, hid, gfx, "Couldn't open /3ds/ctricon-install folder!", HowFix::CtrIconFolder)
         };
         for title in icon_dir {
             let title = title?.path();
@@ -137,7 +142,7 @@ fn main() -> anyhow::Result<()> {
             for id in titles.iter().skip(title_pos).take(10) {
                 println!(
                     "{id:016x} - {}",
-                    (&home_menu::get_cacheD_icon(&mut f_cached, cache_dat.position(*id))?
+                    (&home_menu::get_cache_d_icon(&mut f_cached, cache_dat.position(*id))?
                         .ctr()
                         .title_en
                         .short)
@@ -165,32 +170,8 @@ pub fn open_extdata(fs: Fs) -> Option<(Archive, u64)> {
     for id in EXTDATA_IDS {
         match fs.extdata(id, FsMediaType::Sd) {
             Ok(c) => return Some((c, id)),
-            Err(_e) => {
-                //println!(" Error opening {:08x}\n {}", id, e)
-            }
+            Err(_e) => {}
         }
     }
     None
-}
-
-pub fn prompt_exit(apt: &Apt, hid: &mut Hid, gfx: &Gfx) -> ! {
-    println!("\nPress START to exit");
-
-    // Main loop
-    while apt.main_loop() {
-        //Scan all the inputs. This should be done once for each frame
-        hid.scan_input();
-
-        if hid.keys_down().contains(KeyPad::START) {
-            break;
-        }
-
-        //Wait for VBlank
-        gfx.wait_for_vblank();
-    }
-    exit()
-}
-
-pub fn exit() -> ! {
-    unsafe { ctru_sys::svcExitProcess() };
 }

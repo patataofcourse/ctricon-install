@@ -154,7 +154,12 @@ fn main() -> anyhow::Result<()> {
             title_pos += 10;
         }
 
-        if hid.keys_down().contains(KeyPad::START) {
+        else if hid.keys_down().contains(KeyPad::B) {
+            println!("{:?}",home_menu::get_cache_d_icon(&mut f_cached, cache_dat.position(titles[0]))?
+            .ctr())
+        }
+
+        else if hid.keys_down().contains(KeyPad::START) {
             break;
         }
 

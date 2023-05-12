@@ -60,14 +60,14 @@ impl CacheDat {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct AppTitles {
     pub short: [u8; 0x80],
     pub long: [u8; 0x100],
     pub publisher: [u8; 0x80],
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct GameRatings {
     pub cero: u8,
     pub esrb: u8,
@@ -91,7 +91,7 @@ impl GameRatings {
     pub const AGE_MASK: u32 = 0x1F;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct AppSettings {
     pub ratings: GameRatings,
     pub regions: u32,
@@ -130,7 +130,7 @@ impl AppSettings {
 pub type IconGfxSmall = [u8; 0x480];
 pub type IconGfxLarge = [u8; 0x1200];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct CtrIcon {
     pub magic: [u8; 4], // b"SMDH"
     pub version: u16,
